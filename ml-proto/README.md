@@ -1,6 +1,10 @@
 # WebAssembly Interpreter
 
-This repository implements a prototypical reference interpreter for WebAssembly. It is written for clarity and simplicity, _not_ speed (although it should be reasonably fast). Hopefully, it can be useful as a playground for trying out ideas and a device for nailing down the exact semantics. For that purpose, the code is written in a fairly declarative, "speccy" way.
+This repository implements a prototypical reference interpreter for WebAssembly.
+It is written for clarity and simplicity, _not_ speed (although it should be
+reasonably fast). Hopefully, it can be useful as a playground for trying out
+ideas and a device for nailing down the exact semantics. For that purpose, the
+code is written in a fairly declarative, "speccy" way.
 
 Currently, it can
 
@@ -11,97 +15,120 @@ Currently, it can
 * *encode* the binary format,
 * *prettyprint* the S-expression format.
 
-The S-expression format is a (very dumb) form of *script* that cannot just define a module, but in fact a sequence of them, and a batch of invocations, assertions, and conversions to each one. As such it is different from the binary format, with the additional functionality purely intended as testing infrastructure. (See [below](#scripts) for details.)
+The S-expression format is a (very dumb) form of *script* that cannot just
+define a module, but in fact a sequence of them, and a batch of invocations,
+assertions, and conversions to each one. As such it is different from the binary
+format, with the additional functionality purely intended as testing
+infrastructure. (See [below](#scripts) for details.)
 
-The interpreter can also be run as a REPL, allowing to enter pieces of scripts interactively.
+The interpreter can also be run as a REPL, allowing to enter pieces of scripts
+interactively.
 
 
 ## Building
 
-You'll need OCaml 4.02. The best way to get this is to download the [source tarball from our mirror of the ocaml website](https://wasm.storage.googleapis.com/ocaml-4.02.2.tar.gz) and do the configure / make dance.  On OSX, with [Homebrew](http://brew.sh/) installed, simply `brew install ocaml ocamlbuild`.
+You'll need OCaml 4.02. The best way to get this is to download the [source
+tarball]() from our mirror of the ocaml website.  and do the configure / make
+dance.  On OSX, with [Homebrew](http://brew.sh/) installed, simply `brew install
+ocaml ocamlbuild`.
 
-Once you have OCaml, simply do
 
-```
-make
-```
-You'll get an executable named `./wasm`. This is a byte code executable. If you want a (faster) native code executable, do
-```
-make opt
-```
+Once you have OCaml, simply do:
+
+    make
+
+You'll get an executable named `./wasm`. This is a byte code executable. If you
+want a (faster) native code executable, do:
+
+    make opt
+
 To run the test suite,
-```
-make test
-```
+
+    make test
+
 To do everything:
-```
-make all
-```
-Before committing changes, you should do
-```
-make land
-```
+
+    make all
+
+Before committing changes, you should do:
+
+    make land
+
 That builds `all`, plus updates `winmake.bat`.
 
 
 #### Building on Windows
 
-We recommend a pre-built installer. With [this one](https://protz.github.io/ocaml-installer/) you have two options:
+We recommend a pre-built installer. With [this
+one](https://protz.github.io/ocaml-installer/) you have two options:
 
-1. Bare OCaml. If you just want to build the interpreter and don't care about modifying it, you don't need to install the Cygwin core that comes with the installer. Just install OCaml itself and run
-```
-winmake.bat
-```
-in a Windows shell, which creates a program named `wasm`. Note that this will be a byte code executable only, i.e., somewhat slower.
+1. Bare OCaml. If you just want to build the interpreter and don't care about
+   modifying it, you don't need to install the Cygwin core that comes with the
+   installer. Just install OCaml itself and run
 
-2. OCaml + Cygwin. If you want to build a native code executable, or want to hack on the interpreter (i.e., use incremental compilation), then you need to install the Cygwin core that is included with the OCaml installer. Then you can build the interpreter using `make` in the Cygwin terminal, as described above.
+        winmake.bat
 
-Either way, in order to run the test suite you'll need to have Python installed. If you used Option 1, you can invoke the test runner `runtests.py` directly instead of doing it through `make`.
+   in a Windows shell, which creates a program named `wasm`. Note that this
+   will be a byte code executable only, i.e., somewhat slower.
+
+2. OCaml + Cygwin. If you want to build a native code executable, or want to
+   hack on the interpreter (i.e., use incremental compilation), then you need to
+   install the Cygwin core that is included with the OCaml installer. Then you
+   can build the interpreter using `make` in the Cygwin terminal, as described
+   above.
+
+Either way, in order to run the test suite you'll need to have Python installed.
+If you used Option 1, you can invoke the test runner `runtests.py` directly
+instead of doing it through `make`.
 
 
 ## Synopsis
 
-You can call the executable with
+You can call the executable with:
 
-```
-wasm [option | file ...]
-```
+    wasm [option | file ...]
 
-where `file`, depending on its extension, either should be an S-expression script file (see below) to be run, or a binary module file to be loaded.
+where `file`, depending on its extension, either should be an S-expression
+script file (see below) to be run, or a binary module file to be loaded.
 
-By default, the interpreter validates all modules.
-The `-u` option selects "unchecked mode", which skips validation and runs code as is.
-Runtime type errors will be captured and reported appropriately.
+By default, the interpreter validates all modules.  The `-u` option selects
+"unchecked mode", which skips validation and runs code as is.  Runtime type
+errors will be captured and reported appropriately.
 
-A file prefixed by `-o` is taken to be an output file. Depending on its extension, this will write out the preceding module definition in either S-expression or binary format. This option can be used to convert between the two in both directions, e.g.:
+A file prefixed by `-o` is taken to be an output file. Depending on its
+extension, this will write out the preceding module definition in either
+S-expression or binary format. This option can be used to convert between the
+two in both directions, e.g.:
 
-```
-wasm -d module.wast -o module.wasm
-wasm -d module.wasm -o module.wast
-```
+    wasm -d module.wast -o module.wasm
+    wasm -d module.wasm -o module.wast
 
 In the second case, the produced script contains exactly one module definition.
-The `-d` option selects "dry mode" and ensures that the input module is not run, even if it has a start section.
-In addition, the `-u` option for "unchecked mode" can be used to convert even modules that do not validate.
+The `-d` option selects "dry mode" and ensures that the input module is not run,
+even if it has a start section.  In addition, the `-u` option for "unchecked
+mode" can be used to convert even modules that do not validate.
 
-Finally, the option `-e` allows to provide arbitrary script commands directly on the command line. For example:
+Finally, the option `-e` allows to provide arbitrary script commands directly on
+the command line. For example:
 
-```
-wasm module.wasm -e '(invoke "foo")'
-```
+    wasm module.wasm -e '(invoke "foo")'
 
-If neither a file nor any of the previous options is given, you'll land in the REPL and can enter script commands interactively. You can also get into the REPL by explicitly passing `-` as a file name. You can do that in combination to giving a module file, so that you can then invoke its exports interactively, e.g.:
+If neither a file nor any of the previous options is given, you'll land in the
+REPL and can enter script commands interactively. You can also get into the REPL
+by explicitly passing `-` as a file name. You can do that in combination to
+giving a module file, so that you can then invoke its exports interactively,
+e.g.:
 
-```
-wasm module.wast -
-```
+    wasm module.wast -
 
 See `wasm -h` for (the few) additional options.
 
 
 ## S-Expression Syntax
 
-The implementation consumes a WebAssembly AST given in S-expression syntax. Here is an overview of the grammar of types, expressions, functions, and modules, mirroring what's described in the [design doc](https://github.com/WebAssembly/design/blob/master/AstSemantics.md):
+The implementation consumes a WebAssembly AST given in S-expression syntax. Here
+is an overview of the grammar of types, expressions, functions, and modules,
+mirroring what's described in the [design doc]():
 
 ```
 value: <int> | <float>
@@ -211,42 +238,75 @@ The interpreter also supports a "dry" mode (flag `-d`), in which modules are onl
 
 ## Abstract Syntax and Kernel Syntax
 
-The abstract WebAssembly syntax, as described above and in the [design doc](https://github.com/WebAssembly/design/blob/master/AstSemantics.md), is defined in [ast.ml](spec/ast.ml).
+The abstract WebAssembly syntax, as described above and in the [design doc]()
+, is defined in [ast.ml](spec/ast.ml).
 
-However, to simplify the implementation, this AST representation is first "desugared" into a more minimal *kernel* language that is a subset of the full language. For example, conditionals with no else-branch are desugared into conditionals with `nop` for their else-branch, such that in the kernel language, all conditionals have two branches. The desugaring rules are sketched in the comments of the S-expression grammar given above.
+However, to simplify the implementation, this AST representation is first
+"desugared" into a more minimal *kernel* language that is a subset of the
+full language. For example, conditionals with no else-branch are desugared into
+conditionals with `nop` for their else-branch, such that in the kernel language,
+all conditionals have two branches. The desugaring rules are sketched in the
+comments of the S-expression grammar given above.
 
-The representation for that kernel language AST is defined in [kernel.ml](spec/kernel.ml). Besides having fewer constructs, it also raises the level of abstraction further, e.g., by grouping related operators, or decomposing the syntactic structure of operators themselves.
+The representation for that kernel language AST is defined in
+[kernel.ml](spec/kernel.ml).  Besides having fewer constructs, it also raises
+the level of abstraction further, e.g., by grouping related operators, or
+decomposing the syntactic structure of operators themselves.
 
 
 ## Implementation
 
 The implementation is split into three directories:
 
-* `spec`: the part of the implementation that corresponds to the actual language specification.
+* `spec`: the part of the implementation that corresponds to the actual language
+  specification.
 
-* `host`: infrastructure for loading and running scripts, parsing S-expressions, and defining host environment modules.
+* `host`: infrastructure for loading and running scripts, parsing S-expressions,
+  and defining host environment modules.
 
 * `given`: auxiliary libraries.
 
 The implementation consists of the following parts:
 
-* *Abstract Syntax* (`ast.ml`, `kernel.ml`, `types.ml`, `source.ml[i]`). Notably, the `phrase` wrapper type around each AST node carries the source position information.
+* *Abstract Syntax* (`ast.ml`, `kernel.ml`, `types.ml`, `source.ml[i]`).
+  Notably, the `phrase` wrapper type around each AST node carries the source
+  position information.
 
-* *Parser* (`lexer.mll`, `parser.mly`, `desguar.ml[i]`). Generated with ocamllex and ocamlyacc. The lexer does the opcode encoding (non-trivial tokens carry e.g. type information as semantic values, as declared in `parser.mly`), the parser the actual S-expression parsing. The parser generates a full AST that is desugared into the kernel AST in a separate pass.
+* *Parser* (`lexer.mll`, `parser.mly`, `desguar.ml[i]`). Generated with ocamllex
+  and ocamlyacc. The lexer does the opcode encoding (non-trivial tokens carry
+  e.g. type information as semantic values, as declared in `parser.mly`), the
+  parser the actual S-expression parsing. The parser generates a full AST that
+  is desugared into the kernel AST in a separate pass.
 
-* *Pretty Printer* (`arrange.ml[i]`, `sexpr.ml[i]`). Turns a module AST back into the textual S-expression format.
+* *Pretty Printer* (`arrange.ml[i]`, `sexpr.ml[i]`). Turns a module AST back
+  into the textual S-expression format.
 
-* *Decoder*/*Encoder* (`decode.ml[i]`, `encode.ml[i]`). The former parses the binary format and turns it into an AST, the latter does the inverse.
+* *Decoder*/*Encoder* (`decode.ml[i]`, `encode.ml[i]`). The former parses the
+  binary format and turns it into an AST, the latter does the inverse.
 
-* *Validator* (`check.ml[i]`). Does a recursive walk of the kernel AST, passing down the *expected* type for expressions, and checking each expression against that. An expected empty type can be matched by any result, corresponding to implicit dropping of unused values (e.g. in a block).
+* *Validator* (`check.ml[i]`). Does a recursive walk of the kernel AST, passing
+  down the *expected* type for expressions, and checking each expression against
+  that. An expected empty type can be matched by any result, corresponding to
+  implicit dropping of unused values (e.g. in a block).
 
-* *Evaluator* (`eval.ml[i]`, `values.ml`, `arithmetic.ml[i]`, `int.ml`, `float.ml`, `memory.ml[i]`, and a few more). Evaluation of control transfer (`br` and `return`) is implemented using local exceptions as "labels". While these are allocated dynamically in the code and addressed via a stack, that is merely to simplify the code. In reality, these would be static jumps.
+* *Evaluator* (`eval.ml[i]`, `values.ml`, `arithmetic.ml[i]`, `int.ml`,
+  `float.ml`, `memory.ml[i]`, and a few more). Evaluation of control transfer
+  (`br` and `return`) is implemented using local exceptions as "labels". While
+  these are allocated dynamically in the code and addressed via a stack, that is
+  merely to simplify the code. In reality, these would be static jumps.
 
-* *Driver* (`main.ml`, `run.ml[i]`, `script.ml[i]`, `error.ml`, `print.ml[i]`, `flags.ml`). Executes scripts, reports results or errors, etc.
+* *Driver* (`main.ml`, `run.ml[i]`, `script.ml[i]`, `error.ml`, `print.ml[i]`,
+  `flags.ml`). Executes scripts, reports results or errors, etc.
 
-The most relevant pieces are probably the validator (`check.ml`) and the evaluator (`eval.ml`). They are written to look as much like a "specification" as possible. Hopefully, the code is fairly self-explanatory, at least for those with a passing familiarity with functional programming.
+The most relevant pieces are probably the validator (`check.ml`) and the
+evaluator (`eval.ml`). They are written to look as much like a "specification"
+as possible. Hopefully, the code is fairly self-explanatory, at least for those
+with a passing familiarity with functional programming.
 
-In typical FP convention (and for better readability), the code tends to use single-character names for local variables where consistent naming conventions are applicable (e.g., `e` for expressions, `v` for values, `xs` for lists of `x`s, etc.). See `check.ml` and `eval.ml` for explicit comments.
+In typical FP convention (and for better readability), the code tends to use
+single-character names for local variables where consistent naming conventions
+are applicable (e.g., `e` for expressions, `v` for values, `xs` for lists of
+`x`s, etc.). See `check.ml` and `eval.ml` for explicit comments.
 
 
 ## What Next?
@@ -256,3 +316,6 @@ In typical FP convention (and for better readability), the code tends to use sin
 * More tests.
 
 * Compilation to JS/asm.js?
+
+  [source tarball]: https://wasm.storage.googleapis.com/ocaml-4.02.2.tar.gz
+  [design doc]: https://github.com/WebAssembly/design/blob/master/AstSemantics.md
